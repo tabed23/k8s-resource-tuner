@@ -19,7 +19,6 @@ func roundMiB(memBytes float64) string {
 	return fmt.Sprintf("%.0fMi", mb)
 }
 
-// Fixed typo here!
 func resourceMustParse(val string) resource.Quantity {
 	q, err := resource.ParseQuantity(val)
 	if err != nil {

@@ -39,6 +39,8 @@ type UsageStats struct {
     MemAvg        float64   `json:"mem_avg"`
     MemP95        float64   `json:"mem_p95"`
     MemP99        float64   `json:"mem_p99"`
+    CurrentCPU     float64   `json:"current_cpu"`
+    CurrentMemory  float64   `json:"current_memory"`
 }
 
 type Recommendation struct {
@@ -46,6 +48,7 @@ type Recommendation struct {
     RecommendedRequest ResourceConfig `json:"recommended_request"`
     RecommendedLimit   ResourceConfig `json:"recommended_limit"`
     Reason             string         `json:"reason"`
+    UsageStats         *UsageStats    `json:"usage_stats,omitempty"`  // Add UsageStats here
 }
 
 type Report struct {

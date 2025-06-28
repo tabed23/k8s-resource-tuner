@@ -13,7 +13,7 @@ import (
 
 
 func InitKubeClient() (*kubernetes.Clientset, error) {
-	kubeconfig := "pasth to kube config"
+	kubeconfig := ""
 
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {

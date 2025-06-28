@@ -92,3 +92,22 @@ func (pc *PromClient) QueryMemory(namespace string, deploy string, start, end ti
 	query := fmt.Sprintf(`max_over_time(container_memory_usage_bytes{namespace="%s", pod=~"%s-.*"}[5m])`, namespace, deploy)
 	return pc.QueryRange(query, start, end, step)
 }
+
+
+func (pc *PromClient) QueryCurrentCpu(namespace string, deploy string) (float64, error) {
+	query := fmt.Sprintf(`sum(rate(container_cpu_usage_seconds_total{namespace="%s", pod=~"%s-.*"}[1m]))`, namespace, deploy)
+	values, err := pc.QueryRange(query, time.Now().Add(-1*time.Minute), time.Now(), "60s")
+	if err != nil || len(values) == 0 {
+		return 0, err
+	}
+	return values[0], nil
+}
+
+func (pc *PromClient) QueryCurrentMemory(namespace string, deploy string) (float64, error) {
+	query := fmt.Sprintf(`max(container_memory_usage_bytes{namespace="%s", pod=~"%s-.*"})`, namespace, deploy)
+	values, err := pc.QueryRange(query, time.Now().Add(-1*time.Minute), time.Now(), "60s")
+	if err != nil || len(values) == 0 {
+		return 0, err
+	}
+	return values[0], nil
+}
