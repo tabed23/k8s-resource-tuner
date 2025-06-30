@@ -14,7 +14,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func GenrateReport(clientset *kubernetes.Clientset, prom *prometheus.PromClient, namespace string)(models.Report, error) {
+func GenrateReport(clientset *kubernetes.Clientset, prom *prometheus.PromClient, namespace string) (models.Report, error) {
 
 	worloads, err := k8s.ListDeployments(clientset, namespace)
 	if err != nil {
@@ -68,12 +68,12 @@ func GenrateReport(clientset *kubernetes.Clientset, prom *prometheus.PromClient,
 				MemAvg:        stats.Avg(memVals),
 				MemP95:        stats.Percentile(memVals, 95),
 				MemP99:        stats.Percentile(memVals, 99),
-				CurrentCPU: currentCpu,
+				CurrentCPU:    currentCpu,
 				CurrentMemory: currentMem,
 			}
-    
+
 			rec := recommendation.RecommendFromStats(usageStats)
-			rec.UsageStats = &usageStats  // Assign UsageStats to the Recommendation
+			rec.UsageStats = &usageStats // Assign UsageStats to the Recommendation
 
 			statsList = append(statsList, usageStats)
 			recommendations = append(recommendations, rec)
@@ -96,7 +96,6 @@ func GenrateReport(clientset *kubernetes.Clientset, prom *prometheus.PromClient,
 
 }
 
-
 func PDFReport(reportData models.Report, namespace string) (string, error) {
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.SetTitle("Kubernetes Resource Usage and Recommendations", true)
@@ -110,15 +109,11 @@ func PDFReport(reportData models.Report, namespace string) (string, error) {
 	pdf.SetFont("Arial", "", 12)
 	pdf.Cell(200, 10, fmt.Sprintf("Generated on: %s", reportData.Timestamp.Format("2006-01-02 15:04:05")))
 	pdf.Ln(6)
-	pdf.Cell(200, 10, fmt.Sprintf("Namespace: %s", namespace))
-	pdf.Ln(10)
-
-	// Summary Section
-	pdf.SetFont("Arial", "B", 14)
-	pdf.Cell(200, 10, "Summary:")
-	pdf.Ln(6)
-	pdf.SetFont("Arial", "", 12)
-	pdf.MultiCell(0, 6, reportData.Summary, "", "", false)
+	if namespace == "ALL_NAMESPACES" {
+		pdf.Cell(200, 10, "Namespaces: All (see detailed sections below)")
+	} else {
+		pdf.Cell(200, 10, fmt.Sprintf("Namespace: %s", namespace))
+	}
 	pdf.Ln(10)
 
 	// Detailed Report
@@ -143,10 +138,22 @@ func PDFReport(reportData models.Report, namespace string) (string, error) {
 				memLimit := rec.RecommendedLimit.Limits["memory"]
 
 				pdf.SetFont("Arial", "", 10)
-				pdf.Cell(200, 5, fmt.Sprintf("    CPU Request: %s | CPU Limit: %s", cpuRequest.String(), cpuLimit.String()))
+				cpuReqStr := cpuRequest.String()
+				cpuLimStr := cpuLimit.String()
+				cpuReqCores := recommendation.MillicoresToCores(cpuReqStr)
+				cpuLimCores := recommendation.MillicoresToCores(cpuLimStr)
+				
+				pdf.Cell(200, 5, fmt.Sprintf(
+					"    Recommended CPU Request: %s (%.3f cores) | Recommended CPU Limit: %s (%.3f cores)",
+					cpuReqStr, cpuReqCores, cpuLimStr, cpuLimCores))
 				pdf.Ln(4)
-				pdf.Cell(200, 5, fmt.Sprintf("    Memory Request: %s | Memory Limit: %s", memRequest.String(), memLimit.String()))
+				
+				pdf.Cell(200, 5, fmt.Sprintf("    Recommended Memory Request: %s | Recommended Memory Limit: %s", memRequest.String(), memLimit.String()))
+				pdf.Ln(4)
+				pdf.SetFont("Arial", "I", 9)
+				pdf.Cell(200, 5, "    (Based on p95 for requests and p99 for limits over the last 9 hours)")
 				pdf.Ln(6)
+				pdf.SetFont("Arial", "", 10)
 			}
 
 			// Display current resource usage
@@ -159,8 +166,8 @@ func PDFReport(reportData models.Report, namespace string) (string, error) {
 	}
 
 	// Generate filename with timestamp
-	reportFilename := fmt.Sprintf("k8s_resource_report_%s_%s.pdf", 
-		namespace, 
+	reportFilename := fmt.Sprintf("k8s_resource_report_%s_%s.pdf",
+		namespace,
 		reportData.Timestamp.Format("20060102_150405"))
 
 	err := pdf.OutputFileAndClose(reportFilename)
@@ -171,3 +178,4 @@ func PDFReport(reportData models.Report, namespace string) (string, error) {
 	fmt.Printf("PDF report saved as: %s\n", reportFilename)
 	return reportFilename, nil
 }
+

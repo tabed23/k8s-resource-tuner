@@ -14,6 +14,12 @@ func roundMillicores(cpu float64) string {
 	return fmt.Sprintf("%.0fm", mc)
 }
 
+func MillicoresToCores(millicores string) float64 {
+    var m float64
+    fmt.Sscanf(millicores, "%fm", &m)
+    return m / 1000.0
+}
+
 func roundMiB(memBytes float64) string {
 	mb := math.Ceil(memBytes / 1024 / 1024)
 	return fmt.Sprintf("%.0fMi", mb)
